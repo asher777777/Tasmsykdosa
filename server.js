@@ -18,7 +18,7 @@ app.use(cors({
     'http://localhost:5174',
     'http://192.168.137.1:5173',
     'https://www.matara.pro',
-    'https://v2.hakel.club' // Add the new origin here
+    'https://tasmsykdosa.vercel.app' // Add the new origin here
   ],
   credentials: true
 }));
