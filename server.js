@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
+import path from 'path';
 import ezcountRouter from './api/ezcount.js';
 import nedarimRouter from './api/nedarim.js';
 
@@ -40,6 +41,9 @@ app.use(cors({
 // Parse JSON payloads
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -80,6 +84,11 @@ app.use((req, res) => {
     message: `Cannot ${req.method} ${req.url}`,
     timestamp: new Date().toISOString()
   });
+});
+
+// Catch-all route to serve index.html for any other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Start server
