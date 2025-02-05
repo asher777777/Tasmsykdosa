@@ -5,52 +5,98 @@ import dotenv from 'dotenv';
 import ezcountRouter from './api/ezcount.js';
 import nedarimRouter from './api/nedarim.js';
 
+// Load environment variables
 dotenv.config();
 
+// Initialize express
 const app = express();
-const PORT = 5000;
+
+// Use environment port or default to 5000
+const PORT = process.env.PORT || 5000;
 
 // Configure CORS with all needed origins
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5174',
+  'http://192.168.137.1:5173',
+  'https://www.matara.pro',
+  'https://tasmsykdosa.vercel.app'
+];
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:5174',
-    'http://192.168.137.1:5173',
-    'https://www.matara.pro',
-    'https://tasmsykdosa.vercel.app' // Add the new origin here
-  ],
-  credentials: true
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Middleware
+// Parse JSON payloads
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
-// Use the new routers
+// API Routes
 app.use('/api', ezcountRouter);
 app.use('/api', nedarimRouter);
 
-// Error handling middleware
+// Global error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ 
-    error: 'Internal Server Error',
-    details: err.message 
+  console.error('Error occurred:', err);
+  console.error('Stack trace:', err.stack);
+  
+  // Don't leak error details in production
+  const response = {
+    error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message,
+    status: err.status || 500,
+    timestamp: new Date().toISOString()
+  };
+
+  if (process.env.NODE_ENV !== 'production') {
+    response.stack = err.stack;
+  }
+
+  res.status(response.status).json(response);
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Cannot ${req.method} ${req.url}`,
+    timestamp: new Date().toISOString()
   });
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log('Available endpoints:');
-  console.log('- POST /api/nedarim (Nedarim Plus iframe integration)');
-  console.log('- POST /proxy/nedarim (Nedarim Plus management API)');
-  console.log('- POST /api/ezcount (EZCount integration)');
-  console.log('- GET /api/health (Server health check)');
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log('\nAvailable endpoints:');
+    console.log('📍 POST /api/nedarim    (Nedarim Plus iframe integration)');
+    console.log('📍 POST /proxy/nedarim  (Nedarim Plus management API)');
+    console.log('📍 POST /api/ezcount    (EZCount integration)');
+    console.log('📍 GET  /api/health     (Server health check)');
+    console.log('\nCORS enabled for:', allowedOrigins);
+  });
+}
+
+export default app;
