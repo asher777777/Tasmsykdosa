@@ -16,11 +16,8 @@ const PORT = process.env.PORT || 5000;
 
 // Configure CORS with all needed origins
 const allowedOrigins = [
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:5174',
-  'http://192.168.137.1:5173',
-  'https://www.matara.pro',
+
+ 'https://www.matara.pro',
   'https://tasmsykdosa.vercel.app'
 ];
 
